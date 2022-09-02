@@ -1,12 +1,17 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "BatteryCollectorCharacter.h"
+
+#include <algorithm>
+
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Pickups/PickupBase.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ABatteryCollectorCharacter
@@ -49,6 +54,10 @@ ABatteryCollectorCharacter::ABatteryCollectorCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere Collider"));
+	CollisionSphere->SetupAttachment(RootComponent);
+	CollisionSphere->SetSphereRadius(200.0f);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -60,6 +69,7 @@ void ABatteryCollectorCharacter::SetupPlayerInputComponent(class UInputComponent
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("Collect", IE_Pressed, this, &ABatteryCollectorCharacter::CollectPickups);
 
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ABatteryCollectorCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ABatteryCollectorCharacter::MoveRight);
@@ -76,6 +86,7 @@ void ABatteryCollectorCharacter::SetupPlayerInputComponent(class UInputComponent
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ABatteryCollectorCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ABatteryCollectorCharacter::TouchStopped);
 }
+
 
 void ABatteryCollectorCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
@@ -115,15 +126,29 @@ void ABatteryCollectorCharacter::MoveForward(float Value)
 
 void ABatteryCollectorCharacter::MoveRight(float Value)
 {
-	if ( (Controller != nullptr) && (Value != 0.0f) )
+	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-	
+
 		// get right vector 
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
+	}
+}
+
+void ABatteryCollectorCharacter::CollectPickups()
+{
+	TArray<AActor*> OverlappedActors;
+	CollisionSphere->GetOverlappingActors(OverlappedActors);
+
+	for (const auto OverlappedActor : OverlappedActors)
+	{
+		if (APickupBase* OverlappedPickupBase = Cast<APickupBase>(OverlappedActor); OverlappedPickupBase && OverlappedPickupBase->IsPickupActive() && IsValid(OverlappedPickupBase))
+		{
+			OverlappedPickupBase->OnPickupCollected();
+		}
 	}
 }

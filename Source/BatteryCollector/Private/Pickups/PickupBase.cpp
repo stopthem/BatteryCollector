@@ -6,11 +6,10 @@
 // Sets default values
 APickupBase::APickupBase()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 
-	
 	PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Pickup Mesh"));
 	RootComponent = PickupMesh;
 }
@@ -19,15 +18,14 @@ APickupBase::APickupBase()
 void APickupBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
 void APickupBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
+
 
 bool APickupBase::IsPickupActive() const
 {
@@ -39,5 +37,10 @@ void APickupBase::SetIsActive(bool bStatus)
 	bIsActive = bStatus;
 }
 
+void APickupBase::OnPickupCollected_Implementation()
+{
+	SetIsActive(false);
 
-
+	const FString DebugString = GetName();
+	UE_LOG(LogTemp, Warning, TEXT("Picked up :  %s"), *DebugString);
+}
